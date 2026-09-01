@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>东方妖妖梦 · thprac 网页版</title>
+  <style>
+    body { margin: 0; background: #000; overflow: hidden; }
+    iframe { position: fixed; inset: 0; width: 100vw; height: 100vh; border: 0; background: #000; }
+    #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #080910; color: #f5f1ff; font: 16px system-ui; z-index: 9; }
+    #loading.hidden { display: none; }
+    #diag { position: fixed; left: 8px; bottom: 8px; z-index: 10; max-width: 60vw; max-height: 40vh; overflow: auto; background: rgba(0,0,0,.85); color: #8f8; font: 11px/1.4 monospace; padding: 6px 8px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div id="loading">正在加载游戏数据（约 70MB）…</div>
+  <iframe id="game" src="runtime/th07/th07.html?hosted=1&v=thprac1"></iframe>
+  <pre id="diag"></pre>
+  <script>
+    if (sessionStorage.getItem("th07ok") !== "1") {
+      location.replace("index.html");
+    }
+    var protocol = "eagler-touhou/1";
+    var game = "th07";
+    var frame = document.getElementById("game");
+    var started = false;
+    var pending = {};
+    var nextId = 1;
+    var diag = document.getElementById("diag");
+    var retries = parseInt(sessionStorage.getItem("th07loadRetries") || "0", 10);
+
+    function logDiag(text) {
+      diag.textContent = (diag.textContent + "\n" + new Date().toISOString().slice(11, 19) + " " + text).slice(-3000);
+      console.log("[host]", text);
+    }
+
+    function reloadGame(reason) {
+      retries++;
+      sessionStorage.setItem("th07loadRetries", String(retries));
+      if (retries > 3) {
+        sessionStorage.removeItem("th07loadRetries");
+        logDiag("load failed after retries (" + reason + ")");
+        var loadingEl = document.getElementById("loading");
+        if (loadingEl) loadingEl.textContent = "加载失败，请刷新页面重试";
+        return;
+      }
+      logDiag("auto reload: " + reason);
+      location.reload();
+    }
+
+    function resetRetryCounter() {
+      retries = 0;
+      sessionStorage.removeItem("th07loadRetries");
+    }
+
+    function send(command, payload) {
+      payload = payload || {};
+      var request = { id: nextId++ };
+      frame.contentWindow.postMessage({ protocol: protocol, game: game, command: command, request: request, ...payload }, location.origin);
+      return new Promise(function (resolve, reject) {
+        pending[request.id] = { resolve: resolve, reject: reject };
+        setTimeout(function () { if (pending[request.id]) { delete pending[request.id]; reject(new Error(command + " 超时")); } }, 120000);
+      });
+    }
+
+    window.addEventListener("message", function (e) {
+      if (e.source !== frame.contentWindow) return;
+      var d = e.data || {};
+      if (d.protocol !== protocol || d.game !== game) return;
+      logDiag("event=" + (d.event || "ack") + " cmd=" + (d.command || "-") + " ok=" + (d.ok === undefined ? "-" : d.ok) + (d.error ? " err=" + d.error : ""));
+      if (d.request && pending[d.request.id]) {
+        var p = pending[d.request.id];
+        delete pending[d.request.id];
+        if (d.ok) p.resolve(); else p.reject(new Error(d.error || "配置被引擎拒绝"));
+      }
+      if (d.event === "ready" && !started) start();
+      if (d.event === "error") reloadGame("runtime error: " + (d.error || "unknown"));
+      if (d.event === "transfer" && d.kind === "game") logDiag("data " + Math.round(d.loaded / 1048576) + "/" + Math.round(d.total / 1048576) + "MB");
+    });
+
+    async function start() {
+      started = true;
+      var loading = document.getElementById("loading");
+      logDiag("sending configure (thprac on, music ogg)");
+      loading.textContent = "正在启动游戏…";
+      try {
+        await send("configure", {
+          music: "ogg",
+          resources: [
+            { url: "runtime/th07/bgm-ogg/th07_01.ogg", path: "/bgm-ogg/th07_01.ogg", size: 1684490 },
+            { url: "runtime/th07/bgm-ogg/th07_02.ogg", path: "/bgm-ogg/th07_02.ogg", size: 1674451 },
+            { url: "runtime/th07/bgm-ogg/th07_03.ogg", path: "/bgm-ogg/th07_03.ogg", size: 1307622 },
+            { url: "runtime/th07/bgm-ogg/th07_04.ogg", path: "/bgm-ogg/th07_04.ogg", size: 2683209 },
+            { url: "runtime/th07/bgm-ogg/th07_05.ogg", path: "/bgm-ogg/th07_05.ogg", size: 1019315 },
+            { url: "runtime/th07/bgm-ogg/th07_06.ogg", path: "/bgm-ogg/th07_06.ogg", size: 2476634 },
+            { url: "runtime/th07/bgm-ogg/th07_07.ogg", path: "/bgm-ogg/th07_07.ogg", size: 3329381 },
+            { url: "runtime/th07/bgm-ogg/th07_08.ogg", path: "/bgm-ogg/th07_08.ogg", size: 4929391 },
+            { url: "runtime/th07/bgm-ogg/th07_09.ogg", path: "/bgm-ogg/th07_09.ogg", size: 2814424 },
+            { url: "runtime/th07/bgm-ogg/th07_10.ogg", path: "/bgm-ogg/th07_10.ogg", size: 2891497 },
+            { url: "runtime/th07/bgm-ogg/th07_11.ogg", path: "/bgm-ogg/th07_11.ogg", size: 2078047 },
+            { url: "runtime/th07/bgm-ogg/th07_12.ogg", path: "/bgm-ogg/th07_12.ogg", size: 1215025 },
+            { url: "runtime/th07/bgm-ogg/th07_13.ogg", path: "/bgm-ogg/th07_13.ogg", size: 2849084 },
+            { url: "runtime/th07/bgm-ogg/th07_13b.ogg", path: "/bgm-ogg/th07_13b.ogg", size: 1739207 },
+            { url: "runtime/th07/bgm-ogg/th07_14.ogg", path: "/bgm-ogg/th07_14.ogg", size: 1183097 },
+            { url: "runtime/th07/bgm-ogg/th07_15.ogg", path: "/bgm-ogg/th07_15.ogg", size: 2031494 },
+            { url: "runtime/th07/bgm-ogg/th07_16.ogg", path: "/bgm-ogg/th07_16.ogg", size: 2797531 },
+            { url: "runtime/th07/bgm-ogg/th07_17.ogg", path: "/bgm-ogg/th07_17.ogg", size: 4309810 },
+            { url: "runtime/th07/bgm-ogg/th07_18.ogg", path: "/bgm-ogg/th07_18.ogg", size: 3022591 },
+            { url: "runtime/th07/bgm-ogg/th07_19.ogg", path: "/bgm-ogg/th07_19.ogg", size: 3472042 }
+          ],
+          runtimeResources: [],
+          runtimePack: null,
+          sharedResources: [
+            { url: "msgothic.ttc", path: "/msgothic.ttc" },
+            { url: "unifont.otf", path: "/unifont.otf" }
+          ],
+          options: {
+            thpracEnabled: true,
+            limitPresentationTo60: false,
+            thpracLocale: "zh-CN",
+            oggDecodeMode: "stream",
+            touchEnabled: false,
+            touchBombZoneEnabled: false,
+            th06FocusHitbox: false
+          }
+        });
+        logDiag("configure ack ok, sending launch");
+        await send("launch");
+        logDiag("launch ack ok, game starting");
+        loading.classList.add("hidden");
+        resetRetryCounter();
+      } catch (err) {
+        loading.textContent = "启动失败：" + err.message;
+        logDiag("FAILED: " + err.message);
+        console.error(err);
+      }
+    }
+
+    setTimeout(function () { if (!started) { logDiag("fallback start"); start(); } }, 240000);
+    setTimeout(function () {
+      if (!started && retries <= 3) {
+        logDiag("no ready within 90s, reloading");
+        reloadGame("timeout");
+      }
+    }, 90000);
+  </script>
+</body>
+</html>
