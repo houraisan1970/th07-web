@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>东方妖妖梦 · 网页版</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #080910; color: #f5f1ff; font: 16px system-ui, sans-serif; }
+    .box { text-align: center; padding: 40px; }
+    h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: 2px; }
+    p { color: #9a94b8; margin: 0 0 24px; font-size: 14px; }
+    input { width: 220px; padding: 10px 14px; border: 1px solid #3a3550; border-radius: 8px; background: #12101e; color: #fff; font-size: 16px; text-align: center; outline: none; }
+    input:focus { border-color: #7a6cf0; }
+    button { margin-top: 14px; width: 250px; padding: 11px; border: 0; border-radius: 8px; background: #7a6cf0; color: #fff; font-size: 15px; cursor: pointer; }
+    button:hover { background: #8d80f5; }
+    .err { color: #ff8b8b; font-size: 13px; margin-top: 12px; min-height: 18px; }
+    .hint { margin-top: 26px; font-size: 12px; color: #5d5878; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>東方妖々夢 网页版</h1>
+    <p>请输入密码进入游戏</p>
+    <input id="pass" type="password" placeholder="密码" autocomplete="off">
+    <br>
+    <button id="btn">进入游戏</button>
+    <div class="err" id="err"></div>
+    <div class="hint">首次加载约 70MB，请耐心等待</div>
+  </div>
+  <script>
+    var PASSWORD = "th08";
+    var FRIEND_KEY = "7Kq2mX9pF3";
+    var params = new URLSearchParams(location.search);
+    if (params.get("key") === FRIEND_KEY) {
+      sessionStorage.setItem("th07ok", "1");
+      location.replace("host.html");
+    }
+    function enter() {
+      var v = document.getElementById("pass").value;
+      if (v === PASSWORD) {
+        sessionStorage.setItem("th07ok", "1");
+        location.replace("host.html");
+      } else {
+        document.getElementById("err").textContent = "密码不对";
+      }
+    }
+    document.getElementById("btn").addEventListener("click", enter);
+    document.getElementById("pass").addEventListener("keydown", function (e) { if (e.key === "Enter") enter(); });
+    document.getElementById("pass").focus();
+  </script>
+</body>
+</html>
