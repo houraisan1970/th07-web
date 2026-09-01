@@ -33,13 +33,13 @@
     var params = new URLSearchParams(location.search);
     if (params.get("key") === FRIEND_KEY) {
       sessionStorage.setItem("th07ok", "1");
-      location.replace("host.html");
+      location.replace("host.html?v=2");
     }
     function enter() {
       var v = document.getElementById("pass").value;
       if (v === PASSWORD) {
         sessionStorage.setItem("th07ok", "1");
-        location.replace("host.html");
+        location.replace("host.html?v=2");
       } else {
         document.getElementById("err").textContent = "密码不对";
       }
